@@ -50,7 +50,8 @@ function App() {
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadFile, setUploadFile] = useState(null);
-  const [adminPasscode, setAdminPasscode] = useState(''); // Security tracking
+  const [adminPasscode, setAdminPasscode] = useState(''); 
+  const [showPassword, setShowPassword] = useState(false); // Eye button tracking
   const [isUploading, setIsUploading] = useState(false);
 
   // Storage tracking (Cloudinary Free limit is roughly 25GB)
@@ -65,7 +66,6 @@ function App() {
         setSelectedAsset(response.data[0]);
       }
 
-      // Calculate total file size used from asset array data
       const totalBytes = response.data.reduce((acc, curr) => acc + (curr.fileSize || 0), 0);
       const totalMB = totalBytes / (1024 * 1024);
       setUsedStorageMB(totalMB);
@@ -116,7 +116,6 @@ function App() {
     formData.append('3dFile', uploadFile);
 
     try {
-      // Send the passcode securely inside standard authorization headers
       await axios.post(`${BACKEND_URL}/api/upload-3d`, formData, {
         headers: { 'x-admin-passcode': adminPasscode }
       });
@@ -199,7 +198,22 @@ function App() {
             <form onSubmit={handleUpload} style={{ backgroundColor: '#252525', padding: '16px', borderRadius: '8px', border: '1px solid #333', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
                 <h3 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#aaa' }}>Admin Gate</h3>
-                <input type="password" placeholder="Enter Admin Passcode..." value={adminPasscode} onChange={(e) => setAdminPasscode(e.target.value)} style={{ width: '100%', padding: '10px', boxSizing: 'border-box', backgroundColor: '#111', border: '1px solid #444', color: 'white', borderRadius: '4px' }} />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    placeholder="Enter Admin Passcode..." 
+                    value={adminPasscode} 
+                    onChange={(e) => setAdminPasscode(e.target.value)} 
+                    style={{ width: '100%', padding: '10px', paddingRight: '40px', boxSizing: 'border-box', backgroundColor: '#111', border: '1px solid #444', color: 'white', borderRadius: '4px' }} 
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.1rem', userSelect: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    {showPassword ? "🙈" : "👁️"}
+                  </button>
+                </div>
               </div>
               
               <hr style={{ border: '0', borderTop: '1px solid #333', margin: '5px 0' }} />
@@ -217,7 +231,7 @@ function App() {
           </>
         )}
 
-        {/* PERSISTENT CLOUDINARY CAPACITY REMINDER */}
+        {/* PERSISTENT CAPACITY REMINDER */}
         <div style={{ marginTop: 'auto', backgroundColor: '#0a0a0a', padding: '14px', borderRadius: '8px', border: '1px solid #222' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#aaa', marginBottom: '6px' }}>
             <span>Cloudinary Storage</span>
