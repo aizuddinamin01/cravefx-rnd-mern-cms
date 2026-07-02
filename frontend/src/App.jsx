@@ -4,8 +4,7 @@ import { OrbitControls, Environment, useGLTF } from '@react-three/drei';
 import { io } from 'socket.io-client';
 import axios from 'axios';
 
-// PASTE YOUR LIVE BACKEND URL HERE 
-// Example: 'https://my-3d-backend.onrender.com'
+// ⚠️ PASTE YOUR LIVE BACKEND URL HERE ⚠️
 const BACKEND_URL = 'https://cravefx-rnd-mern-cms.onrender.com'; 
 
 const socket = io(BACKEND_URL);
@@ -51,7 +50,12 @@ function App() {
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadFile, setUploadFile] = useState(null);
+  const [adminPasscode, setAdminPasscode] = useState(''); // Security tracking
   const [isUploading, setIsUploading] = useState(false);
+
+  // Storage tracking (Cloudinary Free limit is roughly 25GB)
+  const STORAGE_LIMIT_GB = 25;
+  const [usedStorageMB, setUsedStorageMB] = useState(0);
 
   const fetchAssets = async () => {
     try {
@@ -60,6 +64,12 @@ function App() {
       if (response.data.length > 0 && !selectedAsset) {
         setSelectedAsset(response.data[0]);
       }
+
+      // Calculate total file size used from asset array data
+      const totalBytes = response.data.reduce((acc, curr) => acc + (curr.fileSize || 0), 0);
+      const totalMB = totalBytes / (1024 * 1024);
+      setUsedStorageMB(totalMB);
+
     } catch (error) {
       console.error('Error fetching assets:', error);
     }
@@ -95,6 +105,10 @@ function App() {
       alert("Please select a 3D file first!");
       return;
     }
+    if (!adminPasscode) {
+      alert("Admin Passcode is required to deploy storage changes!");
+      return;
+    }
 
     setIsUploading(true);
     const formData = new FormData();
@@ -102,7 +116,10 @@ function App() {
     formData.append('3dFile', uploadFile);
 
     try {
-      await axios.post(`${BACKEND_URL}/api/upload-3d`, formData);
+      // Send the passcode securely inside standard authorization headers
+      await axios.post(`${BACKEND_URL}/api/upload-3d`, formData, {
+        headers: { 'x-admin-passcode': adminPasscode }
+      });
       alert('Upload Successful!');
       setUploadTitle('');
       setUploadFile(null);
@@ -110,13 +127,14 @@ function App() {
       setActiveTab('viewer'); 
     } catch (error) {
       console.error(error);
-      alert('Upload failed.');
+      alert(error.response?.data?.error || 'Upload failed.');
     } finally {
       setIsUploading(false);
     }
   };
 
   const is3DModel = selectedAsset?.filename.endsWith('.glb') || selectedAsset?.filename.endsWith('.gltf');
+  const storagePercentage = Math.min(((usedStorageMB / 1024) / STORAGE_LIMIT_GB) * 100, 100);
 
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100vw', backgroundColor: '#121212', color: '#eaeaea', fontFamily: 'system-ui, sans-serif' }}>
@@ -165,7 +183,8 @@ function App() {
                       key={asset._id} 
                       onClick={() => { setSelectedAsset(asset); handleResetColor(); }}
                       style={{ padding: '12px', backgroundColor: selectedAsset?._id === asset._id ? '#333' : '#222', border: `1px solid ${selectedAsset?._id === asset._id ? '#00ffcc' : '#333'}`, borderRadius: '8px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: '0.2s' }}>
-                      <span style={{ fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asset.title}</span>
+                      <span style={{ fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '80%' }}>{asset.title}</span>
+                      <span style={{ fontSize: '0.7rem', color: '#666' }}>{asset.fileSize ? `${(asset.fileSize / (1024*1024)).toFixed(1)}MB` : '0MB'}</span>
                     </div>
                   ))
                 )}
@@ -177,16 +196,41 @@ function App() {
         {activeTab === 'upload' && (
           <>
             <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#fff' }}>Add New Model</h2>
-            <form onSubmit={handleUpload} style={{ backgroundColor: '#252525', padding: '16px', borderRadius: '8px', border: '1px solid #333' }}>
-              <h3 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#aaa' }}>Upload Asset (.glb)</h3>
-              <input type="text" placeholder="Asset Title..." value={uploadTitle} onChange={(e) => setUploadTitle(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '10px', boxSizing: 'border-box', backgroundColor: '#111', border: '1px solid #444', color: 'white', borderRadius: '4px' }} />
-              <input type="file" accept=".glb,.gltf" onChange={(e) => setUploadFile(e.target.files[0])} style={{ marginBottom: '10px', width: '100%', color: '#aaa' }} />
-              <button type="submit" disabled={isUploading} style={{ padding: '10px', width: '100%', cursor: isUploading ? 'not-allowed' : 'pointer', backgroundColor: isUploading ? '#666' : '#00ffcc', color: '#000', border: 'none', borderRadius: '4px', fontWeight: 'bold' }}>
-                {isUploading ? 'Uploading...' : 'Upload to Library'}
+            <form onSubmit={handleUpload} style={{ backgroundColor: '#252525', padding: '16px', borderRadius: '8px', border: '1px solid #333', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#aaa' }}>Admin Gate</h3>
+                <input type="password" placeholder="Enter Admin Passcode..." value={adminPasscode} onChange={(e) => setAdminPasscode(e.target.value)} style={{ width: '100%', padding: '10px', boxSizing: 'border-box', backgroundColor: '#111', border: '1px solid #444', color: 'white', borderRadius: '4px' }} />
+              </div>
+              
+              <hr style={{ border: '0', borderTop: '1px solid #333', margin: '5px 0' }} />
+
+              <div>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#aaa' }}>Asset Details</h3>
+                <input type="text" placeholder="Asset Title..." value={uploadTitle} onChange={(e) => setUploadTitle(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '10px', boxSizing: 'border-box', backgroundColor: '#111', border: '1px solid #444', color: 'white', borderRadius: '4px' }} />
+                <input type="file" accept=".glb,.gltf" onChange={(e) => setUploadFile(e.target.files[0])} style={{ width: '100%', color: '#aaa' }} />
+              </div>
+
+              <button type="submit" disabled={isUploading} style={{ padding: '10px', width: '100%', cursor: isUploading ? 'not-allowed' : 'pointer', backgroundColor: isUploading ? '#666' : '#00ffcc', color: '#000', border: 'none', borderRadius: '4px', fontWeight: 'bold', marginTop: '5px' }}>
+                {isUploading ? 'Uploading...' : 'Upload to Cloud Library'}
               </button>
             </form>
           </>
         )}
+
+        {/* PERSISTENT CLOUDINARY CAPACITY REMINDER */}
+        <div style={{ marginTop: 'auto', backgroundColor: '#0a0a0a', padding: '14px', borderRadius: '8px', border: '1px solid #222' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#aaa', marginBottom: '6px' }}>
+            <span>Cloudinary Storage</span>
+            <span>{usedStorageMB.toFixed(1)} MB / {STORAGE_LIMIT_GB * 1024} MB</span>
+          </div>
+          <div style={{ height: '6px', backgroundColor: '#222', borderRadius: '3px', overflow: 'hidden' }}>
+            <div style={{ width: `${storagePercentage}%`, height: '100%', backgroundColor: storagePercentage > 85 ? '#ff4a4a' : '#00ffcc', transition: 'width 0.5s ease' }} />
+          </div>
+          <div style={{ fontSize: '0.65rem', color: '#555', marginTop: '6px', textAlign: 'right' }}>
+            {(STORAGE_LIMIT_GB - (usedStorageMB / 1024)).toFixed(2)} GB Free Capacity Remaining
+          </div>
+        </div>
+
       </div>
 
       {/* MAIN 3D CANVAS */}

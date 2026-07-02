@@ -1,13 +1,11 @@
 import mongoose from "mongoose";
 
+// Inside your Asset.js schema, make sure it has a field for size:
 const assetSchema = new mongoose.Schema({
-
-    title: {type: String, required: true },
-    description:{type:String},
-    filename:{ type: String, required: true},
-    fileUrl:{ type: String, required: true},
-    uploadDate:{ type: Date, default: Date.now},
-
+    title: String,
+    filename: String,
+    fileUrl: String,
+    fileSize: { type: Number, default: 0 }, // Size in bytes
+    uploadDate: { type: Date, default: Date.now }
 });
-
 export default mongoose.model('Asset',assetSchema);

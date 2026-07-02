@@ -54,29 +54,42 @@ const upload = multer({ dest: os.tmpdir() });
 
 // --- 3. API ROUTES ---
 
-// POST Route: Upload File to Cloudinary & Save Data to MongoDB
+// POST Route: Upload File to Cloudinary & Save Data to MongoDB (Secured)
 app.post('/api/upload-3d', upload.single('3dFile'), async (req, res) => {
     try {
+        // 1. Guard Rail: Verify Admin Passcode before touching Cloudinary
+        const clientPasscode = req.headers['x-admin-passcode'];
+        const correctPasscode = process.env.ADMIN_PASSCODE;
+
+        if (!correctPasscode || clientPasscode !== correctPasscode) {
+            // Clean up the temp file immediately if unauthorized
+            if (req.file && fs.existsSync(req.file.path)) {
+                fs.unlinkSync(req.file.path);
+            }
+            return res.status(403).json({ error: 'Unauthorized: Invalid Admin Passcode' });
+        }
+
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        // 1. Push the temporary local file to Cloudinary
+        // 2. Push the temporary local file to Cloudinary
         const cloudinaryResponse = await cloudinary.uploader.upload(req.file.path, {
             folder: '3d-cms-assets',
-            resource_type: 'auto' // Accepts .glb files
+            resource_type: 'auto'
         });
 
-        // 2. Delete the temporary local file from your server to save space
+        // 3. Delete the temporary local file from your server
         if (fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
         }
 
-        // 3. Save the live Cloudinary URL to MongoDB
+       // Update this mapping block inside your app.post route:
         const newAsset = new Asset({
             title: req.body.title || 'Untitled Model',
             filename: req.file.originalname,
-            fileUrl: cloudinaryResponse.secure_url, 
+            fileUrl: cloudinaryResponse.secure_url,
+            fileSize: cloudinaryResponse.bytes, // Save the size in bytes!
         });
 
         const savedAsset = await newAsset.save();
@@ -84,12 +97,9 @@ app.post('/api/upload-3d', upload.single('3dFile'), async (req, res) => {
 
     } catch (error) {
         console.error('Error saving asset:', error);
-        
-        // Clean up temp file if upload failed mid-way
         if (req.file && fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
         }
-        
         res.status(500).json({ error: 'Failed to upload asset' });
     }
 });
