@@ -90,7 +90,7 @@ function App() {
 
   // Layout states
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 850);
-  const [isUiOpen, setIsUiOpen] = useState(true); // Control menu visibility for mobile collapse
+  const [isUiOpen, setIsUiOpen] = useState(true); 
   
   const STORAGE_LIMIT_GB = 25;
   const [usedStorageMB, setUsedStorageMB] = useState(0);
@@ -99,7 +99,7 @@ function App() {
     const handleResize = () => {
       const mobileCheck = window.innerWidth <= 850;
       setIsMobile(mobileCheck);
-      if (!mobileCheck) setIsUiOpen(true); // Auto-open if resizing back to desktop
+      if (!mobileCheck) setIsUiOpen(true); 
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -172,10 +172,10 @@ function App() {
   const is3DModel = selectedAsset?.filename.endsWith('.glb') || selectedAsset?.filename.endsWith('.gltf');
   const storagePercentage = Math.min(((usedStorageMB / 1024) / STORAGE_LIMIT_GB) * 100, 100);
 
-  // --- APPLE STYLE DEFINITIONS ---
+  // --- APPLE STYLE DEFINITIONS (Equipped with dynamic 100dvh parameters) ---
   const containerStyle = {
     position: 'relative',
-    height: '100vh',
+    height: '100dvh',
     width: '100vw',
     backgroundColor: '#000000',
     backgroundImage: 'radial-gradient(circle at 50% 30%, #1c1c1e 0%, #000000 85%)',
@@ -196,11 +196,11 @@ function App() {
     ...glassStyle,
     position: 'absolute',
     borderRadius: isMobile ? '20px 20px 0 0' : '24px',
-    bottom: isMobile ? '0' : '16px',
+    bottom: '0',
     left: isMobile ? '0' : '16px',
     top: isMobile ? 'auto' : '16px',
     width: isMobile ? '100vw' : '76px',
-    height: isMobile ? '64px' : 'calc(100vh - 32px)',
+    height: isMobile ? '64px' : 'calc(100dvh - 32px)',
     display: 'flex',
     flexDirection: isMobile ? 'row' : 'column',
     justifyContent: isMobile ? 'space-around' : 'flex-start',
@@ -220,7 +220,7 @@ function App() {
     top: isMobile ? 'auto' : '16px',
     bottom: isMobile ? '80px' : '16px',
     width: isMobile ? 'auto' : '340px',
-    height: isMobile ? '38vh' : 'auto',
+    height: isMobile ? '38dvh' : 'auto',
     padding: '24px',
     display: 'flex',
     flexDirection: 'column',
@@ -228,7 +228,6 @@ function App() {
     zIndex: 20,
     overflowY: 'auto',
     boxSizing: 'border-box',
-    // Dynamic structural transformation hooks for mobile collapsibility
     transform: isMobile && !isUiOpen ? 'translateY(calc(100% + 100px))' : 'translateY(0)',
     opacity: isMobile && !isUiOpen ? 0 : 1,
     transition: 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease'
@@ -377,7 +376,7 @@ function App() {
       </div>
 
       {/* --- FULLSCREEN GRAPHICS RENDERING CANVAS LAYER --- */}
-      <div style={{ position: 'absolute', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 1 }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, width: '100vw', height: '100dvh', zIndex: 1 }}>
         <Canvas camera={{ position: [0, 0, 4.2], fov: 45 }}>
           <Environment preset="studio" intensity={0.8} />
           <ambientLight intensity={0.7} />
