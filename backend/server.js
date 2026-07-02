@@ -7,6 +7,7 @@ import { Server } from 'socket.io';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 import fs from 'node:fs';
+import os from 'node:os'; // Added to tap into system temp folders
 
 // Import your Asset model
 import Asset from './models/Asset.js';
@@ -48,8 +49,8 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Use local storage folder temporarily
-const upload = multer({ dest: 'uploads/' });
+// FIX: Uses the OS temp directory so it works flawlessly on cloud hosts like Render
+const upload = multer({ dest: os.tmpdir() });
 
 // --- 3. API ROUTES ---
 
