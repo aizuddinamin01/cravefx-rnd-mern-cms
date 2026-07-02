@@ -6,7 +6,7 @@ import axios from 'axios';
 
 // PASTE YOUR LIVE BACKEND URL HERE 
 // Example: 'https://my-3d-backend.onrender.com'
-const BACKEND_URL = 'https://cravefx-rnd-mern-cms.onrender.com/'; 
+const BACKEND_URL = 'https://cravefx-rnd-mern-cms.onrender.com'; 
 
 const socket = io(BACKEND_URL);
 
